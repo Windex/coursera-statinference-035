@@ -1,0 +1,91 @@
+---
+title: "Inferential Data Analysis of Tooth Growth Data"
+author: "Glen Greer, December 2015; Statistical Inference - Inferential Data Analysis"
+output:
+  html_document:
+    keep_md: yes
+    number_sections: yes
+  pdf_document:
+    fig_height: 4.25
+    number_sections: yes
+geometry: top=.2in, bottom=.2in
+---
+
+# Overview
+
+The ToothGrowth data set contains length measurements of teeth for guinea pigs given 0.5, 1 and 2 mg doses of Vitamin C supplements via orange juice (OJ) and ascorbic acid (VC).
+
+Inferential data analysis is done on this data by performing hypothesis testing and confidence intervals to compare dose and supplement effectiveness using Student's T-tests.
+
+# Analysis
+
+First we load the data, and initialize variables for plotting.
+
+```{r}
+data("ToothGrowth")
+
+cols <- c("blue", "darkcyan", "cyan", "orangered", "orange", "yellow")
+means <- NULL
+vars <- NULL
+legend <- NULL
+col <- 1
+```
+
+Next we plot densities of length for each dosage amount with each supplement, along with the mean value for comparison.
+
+```{r}
+plot(c(0,40),c(0,0.2), type="n",
+     main = "ToothGrowth data: Length vs Dose per Supplement",
+     xlab = "Tooth Length", ylab = "Density")
+for(i in c("VC", "OJ")) for(j in c(0.5,1,2)) {
+    supp_dose <- ToothGrowth[ToothGrowth$supp == i & ToothGrowth$dose == j, ]$len
+    lines(density(supp_dose), col = cols[col])
+    abline(v = mean(supp_dose), col = cols[col])
+    means <- c(means, mean(supp_dose))
+    vars <- c(vars, round(var(supp_dose), 3))
+    legend <- c(legend, paste(i, j, "mg"))
+    col <- col + 1
+}
+legend("topright", legend = legend, fill = cols)
+```
+
+We put the means and variances in a table to relate what is shown in the plot.
+
+```{r}
+cbind(legend, means, vars)
+```
+
+Analyzing the data it appears that lower dosages tend towards shorter tooth growth, and higher dosages tend towards longer tooth growth.  We also observe a large amount of variance in the data.
+
+# Confidence Intervals and Hypothosis Tests
+
+## Testing Dosage Amount
+
+Since the data varies widely, we test dosage using `var.equal = FALSE`.  An assumption is made that these tests were done with independent test subjects so we use `paired = FALSE`.
+
+```{r}
+ldose_t <- t.test(len ~ dose, data = ToothGrowth[ToothGrowth$dose != 2.0,],
+                  paired = FALSE, var.equal = FALSE)
+ldose_t
+hdose_t <- t.test(len ~ dose, data = ToothGrowth[ToothGrowth$dose != 0.5,],
+                  paired = FALSE, var.equal = FALSE)
+hdose_t
+```
+
+The confidence intervals found testing low and high dosages are $[`r round(ldose_t$conf.int[1:2], 3)`]$ and $[`r round(hdose_t$conf.int[1:2], 3)`]$  respectively and do not contain zero, therefore we accept the null hypothesis and can correlate tooth length with dosage (higher dosage leads to longer teeth).
+
+## Testing Supplement Type
+
+The supplement data similarly varies with independent test subjects, so we test again using `var.equal = FALSE` and `paired = FALSE`.
+
+```{r}
+supp_t <- t.test(len ~ supp, data = ToothGrowth,
+                 paired = FALSE, var.equal = FALSE)
+supp_t
+```
+
+The confidence interval of $[`r round(supp_t$conf.int[1:2], 3)`]$ contains zero, therefore we reject the null hypothesis and cannot correlate tooth length with supplement type.
+
+# Conclusion
+
+Assuming that tooth growth in gerbils is normally distributed, and that the samples provided estimate the population we can conclude that a higher dose of 2 mg of vitamin C will result in longer tooth growth.
